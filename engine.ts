@@ -7,6 +7,13 @@ export class TemplateEngine {
     this.renderer = new AlignRenderer(width);
   }
 
+  /**
+   * 将生成的文本用 Markdown 代码块包裹，实现"可复制功能"
+   */
+  private wrapWithCopyBlock(content: string): string {
+    return `\`\`\`text\n${content}\n\`\`\``;
+  }
+
   public renderDashboard(data: any): string {
     const lines: string[] = [];
     const p = Math.max(0, Math.min(100, parseInt(data.progress || '0')));
@@ -26,7 +33,8 @@ export class TemplateEngine {
     lines.push(this.renderer.renderDoubleLine(`  ⏱️ ${data.time || '--'} | 📁 ${data.items || '--'} | 💰 ${data.cost || '--'}`, 0));
     lines.push(this.renderer.renderDoubleBottomBorder());
 
-    return lines.join('\n');
+    // 使用 Markdown 代码块包裹，保证各种客户端都不会因为连续空格/特殊符号破坏排版，且自带"点击复制"按钮
+    return this.wrapWithCopyBlock(lines.join('\n'));
   }
 
   public renderMobileNoActive(data: any): string {
@@ -57,7 +65,8 @@ export class TemplateEngine {
     lines.push("🌙 小主人～人家随时待命哦");
     lines.push("");
     lines.push("💤 休息  |  💕 聊天  |  📋 计划");
-    return lines.join('\n');
+    
+    return this.wrapWithCopyBlock(lines.join('\n'));
   }
 
   public renderMobileActive(data: any): string {
@@ -102,7 +111,7 @@ export class TemplateEngine {
     lines.push("");
     lines.push("💤 等待  |  💕 聊天  |  📋 其他");
 
-    return lines.join('\n');
+    return this.wrapWithCopyBlock(lines.join('\n'));
   }
 
   public renderTaskList(data: any): string {
@@ -124,18 +133,19 @@ export class TemplateEngine {
     }
     lines.push("───────────────────────────────────");
     lines.push(`总计：${data.total_tasks || '0'} 任务 | ${data.total_duration || '--'} | ${data.completion_rate || '0'}% 完成`);
-    return lines.join('\n');
+    
+    return this.wrapWithCopyBlock(lines.join('\n'));
   }
 
   public renderTaskTree(data: any): string {
-    return `📊 任务状态\n${data.tree_content || ''}`;
+    return this.wrapWithCopyBlock(`📊 任务状态\n${data.tree_content || ''}`);
   }
 
   public renderTaskDetail(data: any): string {
-    return `【${data.task_name}】\n  ⏱️ ${data.duration}\n  📊 ${data.progress_stats}\n  💰 ${data.cost}\n  ✅ ${data.status}`;
+    return this.wrapWithCopyBlock(`【${data.task_name}】\n  ⏱️ ${data.duration}\n  📊 ${data.progress_stats}\n  💰 ${data.cost}\n  ✅ ${data.status}`);
   }
 
   public renderTaskTimeline(data: any): string {
-    return `${data.time_start}  ${data.task_name} 启动 ─────●\n                    │\n${data.time_now}  ${data.status} ────●───● ${data.next_step}`;
+    return this.wrapWithCopyBlock(`${data.time_start}  ${data.task_name} 启动 ─────●\n                    │\n${data.time_now}  ${data.status} ────●───● ${data.next_step}`);
   }
 }
