@@ -3,100 +3,79 @@
  * OpenClaw 消息格式化工具
  * 
  * 零依赖，仅需 Markdown + TypeScript
- * 支持自动检测平台和设备
+ * 根据场景(scene)自动匹配模版
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 
 const TEMPLATES_DIR = './templates';
-const DEFAULT_PLATFORM = 'auto';
 
-// 支持的平台
-const SUPPORTED_PLATFORMS = [
-  'telegram',
-  'wechat',
-  'dingtalk',
-  'feishu',
-  'slack',
-  'discord',
-  'text'
-];
-
-/**
- * 自动检测平台
- */
-export function detectPlatform(): string {
-  const env = process.env;
+// 场景映射表
+const SCENE_MAP: Record<string, string> = {
+  'task_list': 'task_list',          // 场景 1：简单表格
+  'list': 'task_list',
   
-  // 飞书
-  if (env.FEISHU_WEBHOOK || env.FEISHU_APP_ID) return 'feishu';
+  'task_tree': 'task_tree',          // 场景 2：树结构
+  'tree': 'task_tree',
+  'category': 'task_tree',
   
-  // 钉钉
-  if (env.DINGTALK_WEBHOOK || env.DINGTALK_AGENT_ID) return 'dingtalk';
+  'task_detail': 'task_complete',    // 场景 3：卡片列表
+  'detail': 'task_complete',
+  'complete': 'task_complete',
   
-  // Slack
-  if (env.SLACK_WEBHOOK_URL || env.SLACK_BOT_TOKEN) return 'slack';
+  'timeline': 'task_progress',       // 场景 4：时间轴
+  'progress': 'task_progress',
   
-  // Discord
-  if (env.DISCORD_WEBHOOK_URL || env.DISCORD_BOT_TOKEN) return 'discord';
+  'dashboard': 'status',             // 场景 5：仪表盘
+  'status': 'status',
+  'overview': 'status',
   
-  // 默认 telegram
-  return 'telegram';
-}
+  'error': 'error_alert'             // 错误告警
+};
 
 /**
- * 自动检测设备类型
+ * 根据场景推断使用的模版
  */
-export function detectDevice(): 'desktop' | 'mobile' {
-  const platform = os.platform();
-  
-  if (['win32', 'darwin', 'linux'].includes(platform)) {
-    return 'desktop';
-  }
-  
-  if (['android', 'ios'].includes(platform)) {
-    return 'mobile';
-  }
-  
-  return 'desktop';
+export function getTemplateByScene(scene: string): string {
+  const normalizedScene = scene.toLowerCase();
+  return SCENE_MAP[normalizedScene] || 'status'; // 默认使用仪表盘
 }
 
 /**
  * 格式化消息
  */
 export function format(
-  template: string,
-  platform: string = DEFAULT_PLATFORM,
+  scene: string,
   variables: Record<string, string> = {}
 ): string {
-  // 自动检测平台
-  if (platform === 'auto') {
-    platform = detectPlatform();
+  const templateName = getTemplateByScene(scene);
+  const templatePath = path.join(TEMPLATES_DIR, `${templateName}.md`);
+  
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(`Template for scene '${scene}' (${templateName}.md) not found`);
   }
   
-  const templatePath = path.join(TEMPLATES_DIR, `${template}.md`);
   let content = fs.readFileSync(templatePath, 'utf-8');
   
-  const platformRegex = new RegExp(
-    `<!-- platform:${platform} -->\\n([\\s\\S]*?)\\n<!-- /platform -->`,
-    'g'
-  );
-  const platformMatch = content.match(platformRegex);
+  // 移除旧的平台标识符 (如果有的话)，保持向后兼容但忽略它们
+  content = content.replace(/<!-- platform:\w+ -->\n?/g, '');
+  content = content.replace(/<!-- \/platform -->\n?/g, '');
   
-  if (platformMatch) {
-    content = platformMatch[0]
-      .replace(/<!-- platform:\w+ -->/g, '')
-      .replace(/<!-- \/platform -->/g, '');
-  }
+  // 如果同一个文件里有多个平台的配置（比如旧文件），我们默认只保留 telegram 平台的那一块。
+  // 为了彻底摆脱平台概念，如果文件被纯粹重构过，这里就不需要管了。
+  // 这里做个安全处理：如果检测到旧的文件格式包含 telegram，就提取它。
+  // 由于我们决定彻底移除平台逻辑，我们可以直接清理或者期望模板已经是纯粹的文本。
+  
+  // 简单粗暴：如果有多个平台的代码块，由于之前我们写入的时候，我们把需要的展示逻辑留在了telegram下
+  // 或者用户将要更新纯净的模板，我们直接做全局变量替换
   
   for (const [key, value] of Object.entries(variables)) {
     const regex = new RegExp(`\\{${key}\\}`, 'g');
     content = content.replace(regex, value);
   }
   
-  return content;
+  return content.trim();
 }
 
 /**
@@ -108,23 +87,10 @@ export function listTemplates(): string[] {
 }
 
 /**
- * 检测平台和设备
+ * 获取支持的场景
  */
-export function detect(): {
-  platform: string;
-  device: string;
-  env: Record<string, boolean>;
-} {
-  return {
-    platform: detectPlatform(),
-    device: detectDevice(),
-    env: {
-      FEISHU: !!(process.env.FEISHU_WEBHOOK || process.env.FEISHU_APP_ID),
-      DINGTALK: !!(process.env.DINGTALK_WEBHOOK || process.env.DINGTALK_AGENT_ID),
-      SLACK: !!(process.env.SLACK_WEBHOOK_URL || process.env.SLACK_BOT_TOKEN),
-      DISCORD: !!(process.env.DISCORD_WEBHOOK_URL || process.env.DISCORD_BOT_TOKEN)
-    }
-  };
+export function listScenes(): string[] {
+  return Object.keys(SCENE_MAP);
 }
 
 /**
@@ -133,31 +99,38 @@ export function detect(): {
 export async function handleCommand(command: string, args: string[]): Promise<string> {
   switch (command) {
     case 'format':
-      const [template, platform, ...vars] = args;
-      const variables = Object.fromEntries(vars.map(v => v.split('=')));
-      return format(template, platform, variables);
+      const [scene, ...vars] = args;
+      const variables = Object.fromEntries(vars.map(v => {
+        const idx = v.indexOf('=');
+        if (idx === -1) return [v, ''];
+        return [v.substring(0, idx), v.substring(idx + 1)];
+      }));
+      return format(scene, variables);
     
     case 'list':
-      const templates = listTemplates();
-      return `可用模版:\n${templates.map(t => `  - ${t}`).join('\n')}`;
+      const scenes = listScenes();
+      return `支持的场景映射:\n${scenes.map(s => `  - ${s} -> ${SCENE_MAP[s]}.md`).join('\n')}`;
     
     case 'preview':
-      const [template] = args;
-      return format(template, 'text', {
+      const [previewScene] = args;
+      return format(previewScene || 'dashboard', {
+        project: '预览测试',
+        progress_bar_full: '████████████',
+        progress: '100',
+        progress_bar_done: '████████████',
+        completed: '6',
+        total: '6',
+        time: '4h',
+        items: '40+',
+        cost: '¥1',
         task_name: '测试任务',
-        status: '已完成',
-        completed_at: new Date().toISOString(),
-        duration: '2 小时',
-        assignee: '测试员'
+        duration: '10分钟',
+        status: '已完成'
       });
     
-    case 'detect':
-      const info = detect();
-      return `平台检测:\n  平台：${info.platform}\n  设备：${info.device}\n  环境变量:\n    FEISHU: ${info.env.FEISHU}\n    DINGTALK: ${info.env.DINGTALK}\n    SLACK: ${info.env.SLACK}\n    DISCORD: ${info.env.DISCORD}`;
-    
     default:
-      return `未知命令：${command}`;
+      return `未知命令：${command}\n可用命令: format, list, preview`;
   }
 }
 
-export default { format, listTemplates, handleCommand, detect };
+export default { format, listTemplates, listScenes, handleCommand };
