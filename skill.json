@@ -1,0 +1,23 @@
+{
+  "name": "message-formatter",
+  "version": "1.0.0",
+  "description": "OpenClaw 消息格式化工具 - 零依赖，开箱即用",
+  "author": "小屁孩（御姐模式）",
+  "main": "index.ts",
+  "commands": [
+    {
+      "name": "format",
+      "description": "格式化消息",
+      "usage": "/format <template> [platform] [variables...]"
+    },
+    {
+      "name": "list",
+      "description": "列出所有模版",
+      "usage": "/list"
+    }
+  ],
+  "config": {
+    "templatesDir": "./templates",
+    "defaultPlatform": "telegram"
+  }
+}
