@@ -1,0 +1,17 @@
+{
+  "id": "message-formatter-simple",
+  "name": "Message Formatter Simple",
+  "version": "2.0.0",
+  "description": "OpenClaw 专属消息格式化工具，根据场景自动渲染专属排版模板。",
+  "author": "小屁孩 (OpenClaw Assistant)",
+  "main": "src/index.js",
+  "entry": "src/index.ts",
+  "permissions": {
+    "read": ["memory/display-*.md"],
+    "write": [],
+    "execute": []
+  },
+  "dependencies": {},
+  "keywords": ["formatter", "message", "template", "display", "ocw"],
+  "repository": "https://github.com/steedjson/message-formatter-simple"
+}

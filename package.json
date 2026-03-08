@@ -1,0 +1,27 @@
+{
+  "dependencies": {
+    "typescript": "^5.9.3"
+  },
+  "name": "message-formatter-simple",
+  "version": "1.0.0",
+  "description": "> OpenClaw 专属消息格式化工具 - 根据场景自动渲染专属排版",
+  "main": "index.js",
+  "devDependencies": {
+    "@types/node": "^25.3.5"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/steedjson/message-formatter-simple.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/steedjson/message-formatter-simple/issues"
+  },
+  "homepage": "https://github.com/steedjson/message-formatter-simple#readme"
+}
