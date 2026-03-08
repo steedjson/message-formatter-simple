@@ -5,6 +5,9 @@
  *
  * 根据 display-strategy.md 定义的场景规则，
  * 自动渲染 display-template.md 中的专属模板。
+ *
+ * @version 3.0.0
+ * @author 小屁孩 (OpenClaw Assistant)
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -39,94 +42,235 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MessageFormatter = void 0;
 exports.execute = execute;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
-const DISPLAY_STRATEGY_PATH = path.join(__dirname, '../../../memory/display-strategy.md');
-const DISPLAY_TEMPLATE_PATH = path.join(__dirname, '../../../memory/display-template.md');
+const scene_detector_1 = __importDefault(require("./scene-detector"));
+const renderer_1 = __importDefault(require("./renderer"));
+// 配置文件路径
+const MEMORY_DIR = path.join(__dirname, '../../../memory');
+const DISPLAY_STRATEGY_PATH = path.join(MEMORY_DIR, 'display-strategy.md');
+const DISPLAY_TEMPLATE_PATH = path.join(MEMORY_DIR, 'display-template.md');
+/**
+ * 消息格式化器主类
+ */
 class MessageFormatter {
-    constructor() {
-        this.strategy = fs.readFileSync(DISPLAY_STRATEGY_PATH, 'utf-8');
-        this.template = fs.readFileSync(DISPLAY_TEMPLATE_PATH, 'utf-8');
+    constructor(options = {}) {
+        this.sceneDetector = new scene_detector_1.default();
+        this.renderer = new renderer_1.default(options);
+        this.configLoaded = false;
+        // 尝试加载配置文件
+        this.loadConfig();
     }
-    render(scene, data) {
-        // 根据场景选择模板逻辑
-        // 目前直接返回格式化后的文本
-        return this.formatByScene(scene, data);
-    }
-    formatByScene(scene, data) {
-        // 简化实现：根据场景类型返回对应格式
-        switch (scene.toLowerCase()) {
-            case 'task_list':
-                return this.renderTaskList(data);
-            case 'task_tree':
-                return this.renderTaskTree(data);
-            case 'task_detail':
-                return this.renderTaskDetail(data);
-            case 'timeline':
-                return this.renderTimeline(data);
-            case 'dashboard':
-                return this.renderDashboard(data);
-            default:
-                return this.renderTaskList(data);
-        }
-    }
-    renderTaskList(data) {
-        const lines = [];
-        lines.push('任务名              耗时    状态');
-        lines.push('───────────────────────────────────');
-        if (data.tasks && Array.isArray(data.tasks)) {
-            for (const t of data.tasks) {
-                lines.push(`${t.name.padEnd(18)}  ${t.duration.padEnd(6)}  ${t.status}`);
+    /**
+     * 加载配置文件
+     */
+    loadConfig() {
+        try {
+            if (fs.existsSync(DISPLAY_STRATEGY_PATH)) {
+                fs.readFileSync(DISPLAY_STRATEGY_PATH, 'utf-8');
+                this.configLoaded = true;
+            }
+            if (fs.existsSync(DISPLAY_TEMPLATE_PATH)) {
+                fs.readFileSync(DISPLAY_TEMPLATE_PATH, 'utf-8');
             }
         }
-        lines.push('───────────────────────────────────');
-        lines.push(`总计：${data.total || 0} 任务 | ${data.duration || '--'} | ${data.rate || '0'}% 完成`);
-        return '```text\n' + lines.join('\n') + '\n```';
+        catch (error) {
+            this.configError = `配置文件加载失败：${error instanceof Error ? error.message : '未知错误'}`;
+            // 使用默认配置继续运行
+            this.configLoaded = false;
+        }
     }
-    renderTaskTree(data) {
-        return '```text\n📊 任务状态\n' + (data.tree || '') + '\n```';
+    /**
+     * 自动识别场景并渲染
+     */
+    auto(text, data, options) {
+        const detection = this.sceneDetector.detect(text);
+        // 如果有进行中任务信息，设置到检测器
+        if (data.hasProgressTasks !== undefined) {
+            this.sceneDetector.setHasProgressTasks(data.hasProgressTasks);
+        }
+        return this.render(detection.scene, data, options);
     }
-    renderTaskDetail(data) {
-        return '```text\n【' + (data.name || '任务') + '】\n  ⏱️ ' + (data.duration || '--') + '\n  📊 ' + (data.stats || '--') + '\n  ✅ ' + (data.status || '--') + '\n```';
+    /**
+     * 根据指定场景渲染
+     */
+    render(scene, data, options) {
+        const renderer = options ? new renderer_1.default(options) : this.renderer;
+        switch (scene.toLowerCase()) {
+            case 'task_list':
+                return renderer.renderTaskList(data.tasks || [], data.total, data.duration, data.rate);
+            case 'task_tree':
+                return renderer.renderTaskTree(data.categories || data);
+            case 'task_detail':
+                return renderer.renderTaskDetail(data);
+            case 'timeline':
+                return renderer.renderTimeline(data.events || []);
+            case 'dashboard':
+                return renderer.renderDashboard(data);
+            default:
+                // 未知场景，回退到任务列表
+                return renderer.renderTaskList(data.tasks || [], data.total, data.duration, data.rate);
+        }
     }
-    renderTimeline(data) {
-        return '```text\n' + (data.timeline || '') + '\n```';
+    /**
+     * 渲染进行中任务
+     */
+    renderProgress(task) {
+        return this.renderer.renderProgressTask(task);
     }
-    renderDashboard(data) {
-        const lines = [];
-        lines.push('╔═══════════════════════════════╗');
-        lines.push('║   📊 ' + (data.title || '任务仪表盘').padEnd(24) + '║');
-        lines.push('╠═══════════════════════════════╣');
-        lines.push('║  完成率  ' + (data.progress || '0%').padEnd(24) + '║');
-        lines.push('║  已完成  ' + (data.completed || '0/0').padEnd(24) + '║');
-        lines.push('╠═══════════════════════════════╣');
-        lines.push('║  ⏱️ ' + (data.time || '--').padEnd(28) + '║');
-        lines.push('╚═══════════════════════════════╝');
-        return '```text\n' + lines.join('\n') + '\n```';
+    /**
+     * 渲染页脚
+     */
+    renderFooter(message, actions = []) {
+        return this.renderer.renderFooter(message, actions);
+    }
+    /**
+     * 获取支持的场景列表
+     */
+    getSupportedScenes() {
+        return this.sceneDetector.getSupportedScenes();
+    }
+    /**
+     * 获取场景详情
+     */
+    getSceneDetails(scene) {
+        return this.sceneDetector.getSceneDetails(scene);
+    }
+    /**
+     * 检测场景（不渲染）
+     */
+    detectScene(text) {
+        return this.sceneDetector.detect(text);
+    }
+    /**
+     * 配置状态
+     */
+    isConfigLoaded() {
+        return this.configLoaded;
+    }
+    /**
+     * 配置错误信息
+     */
+    getConfigError() {
+        return this.configError;
     }
 }
 exports.MessageFormatter = MessageFormatter;
-function execute(command, args) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const formatter = new MessageFormatter();
-        if (command === 'render') {
-            const scene = args[0] || 'task_list';
-            const data = JSON.parse(args.slice(1).join(' ') || '{}');
-            return formatter.render(scene, data);
+/**
+ * CLI 执行函数
+ */
+async function execute(command, args) {
+    const formatter = new MessageFormatter();
+    try {
+        switch (command) {
+            case 'render': {
+                // /render --scene <场景> --data <JSON>
+                const sceneIdx = args.indexOf('--scene');
+                const dataIdx = args.indexOf('--data');
+                const widthIdx = args.indexOf('--width');
+                if (sceneIdx === -1 || dataIdx === -1) {
+                    return '❌ 用法：/render --scene <场景> --data <JSON 数据>\n\n支持的场景：' +
+                        formatter.getSupportedScenes().join(', ');
+                }
+                const scene = args[sceneIdx + 1];
+                const data = JSON.parse(args[dataIdx + 1]);
+                const width = widthIdx !== -1 ? parseInt(args[widthIdx + 1]) : undefined;
+                return formatter.render(scene, data, width ? { width } : undefined);
+            }
+            case 'auto': {
+                // /auto --text <文本> --data <JSON>
+                const textIdx = args.indexOf('--text');
+                const dataIdx = args.indexOf('--data');
+                const widthIdx = args.indexOf('--width');
+                if (dataIdx === -1) {
+                    return '❌ 用法：/auto --text <文本> --data <JSON 数据>';
+                }
+                const text = textIdx !== -1 ? args[textIdx + 1] : '';
+                const data = JSON.parse(args[dataIdx + 1]);
+                const width = widthIdx !== -1 ? parseInt(args[widthIdx + 1]) : undefined;
+                return formatter.auto(text, data, width ? { width } : undefined);
+            }
+            case 'list_scenes': {
+                const scenes = formatter.getSupportedScenes();
+                const lines = ['📊 支持的场景:\n'];
+                scenes.forEach(scene => {
+                    const details = formatter.getSceneDetails(scene);
+                    if (details) {
+                        lines.push(`• ${scene}: ${details.style}`);
+                        lines.push(`  关键词：${details.keywords.join(', ')}`);
+                    }
+                });
+                return lines.join('\n');
+            }
+            case 'preview': {
+                const sceneIdx = args.indexOf('--scene');
+                if (sceneIdx === -1) {
+                    return '❌ 用法：/preview --scene <场景>';
+                }
+                const scene = args[sceneIdx + 1];
+                // 示例数据
+                const sampleData = {
+                    task_list: {
+                        tasks: [
+                            { name: '人格魅力 v2.2', duration: '18 分', status: '✅' },
+                            { name: 'P0 游戏管理', duration: '7 分', status: '✅' }
+                        ],
+                        total: 2,
+                        duration: '25 分钟',
+                        rate: 100
+                    },
+                    task_tree: {
+                        '✅ 已完成': {
+                            '💕 人格魅力系列': '4 任务',
+                            '🔴 P0 游戏管理': '1 任务'
+                        },
+                        '🔄 进行中': '0'
+                    },
+                    task_detail: {
+                        name: '💕 人格魅力 v2.2',
+                        duration: '18 分钟',
+                        stats: '82.4%→86.1% (+7.5%)',
+                        status: '已完成'
+                    },
+                    timeline: {
+                        events: [
+                            { time: '20:30', version: 'v1.0', event: '启动' },
+                            { time: '20:40', version: 'v1.0', event: '完成' },
+                            { time: '21:05', version: 'v2.0', event: '完成' }
+                        ]
+                    },
+                    dashboard: {
+                        title: '今日任务仪表盘',
+                        progress: '100%',
+                        completed: '6/6',
+                        time: '4h',
+                        count: '40+',
+                        progressPercent: 100
+                    }
+                };
+                if (!sampleData[scene]) {
+                    return `❌ 未知场景：${scene}\n\n支持的场景：${formatter.getSupportedScenes().join(', ')}`;
+                }
+                return formatter.render(scene, sampleData[scene]);
+            }
+            default:
+                return 'Message Formatter Simple v3.0.0\n\n' +
+                    '用法:\n' +
+                    '  /render --scene <场景> --data <JSON>  渲染指定场景\n' +
+                    '  /auto --text <文本> --data <JSON>     自动识别场景\n' +
+                    '  /list_scenes                          列出所有场景\n' +
+                    '  /preview --scene <场景>               预览模板示例\n\n' +
+                    '支持的场景：' + formatter.getSupportedScenes().join(', ');
         }
-        return 'Message Formatter Simple - 使用 render <场景> <数据> 来渲染消息';
-    });
+    }
+    catch (error) {
+        return `❌ 执行失败：${error instanceof Error ? error.message : '未知错误'}`;
+    }
 }
 exports.default = { MessageFormatter, execute };

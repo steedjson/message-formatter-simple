@@ -1,17 +1,142 @@
 {
-  "id": "message-formatter-simple",
-  "name": "Message Formatter Simple",
-  "version": "2.0.0",
-  "description": "OpenClaw 专属消息格式化工具，根据场景自动渲染专属排版模板。",
+  "name": "message-formatter-simple",
+  "version": "3.0.0",
+  "description": "OpenClaw 专属消息格式化工具，根据场景自动渲染专属排版模板。支持 5 大场景自动识别，严格遵循 40 列宽、单线边框规范。",
   "author": "小屁孩 (OpenClaw Assistant)",
-  "main": "src/index.js",
+  "license": "MIT",
+  "tags": ["formatter", "message", "template", "display", "ocw", "scene-detection"],
   "entry": "src/index.ts",
   "permissions": {
-    "read": ["memory/display-*.md"],
+    "read": ["memory/display-template.md", "memory/display-strategy.md"],
     "write": [],
     "execute": []
   },
-  "dependencies": {},
-  "keywords": ["formatter", "message", "template", "display", "ocw"],
-  "repository": "https://github.com/steedjson/message-formatter-simple"
+  "commands": [
+    {
+      "name": "render",
+      "description": "根据指定场景渲染消息",
+      "usage": "/render --scene <场景> --data <JSON 数据>",
+      "parameters": {
+        "scene": {
+          "type": "string",
+          "required": true,
+          "description": "场景类型 (task_list, task_tree, task_detail, timeline, dashboard)",
+          "enum": ["task_list", "task_tree", "task_detail", "timeline", "dashboard"]
+        },
+        "data": {
+          "type": "string",
+          "required": true,
+          "description": "JSON 格式的数据对象"
+        },
+        "width": {
+          "type": "number",
+          "required": false,
+          "default": 40,
+          "description": "输出宽度（默认 40 列）"
+        }
+      },
+      "examples": [
+        "/render --scene task_list --data '{\"tasks\":[{\"name\":\"任务 1\",\"duration\":\"10 分\",\"status\":\"✅\"}]}'",
+        "/render --scene dashboard --data '{\"title\":\"任务仪表盘\",\"progress\":\"80%\",\"completed\":\"4/5\"}'"
+      ]
+    },
+    {
+      "name": "auto",
+      "description": "自动识别场景并渲染消息",
+      "usage": "/auto --text <文本> --data <JSON 数据>",
+      "parameters": {
+        "text": {
+          "type": "string",
+          "required": false,
+          "description": "用于场景识别的文本（包含关键词）"
+        },
+        "data": {
+          "type": "string",
+          "required": true,
+          "description": "JSON 格式的数据对象"
+        },
+        "width": {
+          "type": "number",
+          "required": false,
+          "default": 40,
+          "description": "输出宽度（默认 40 列）"
+        }
+      },
+      "examples": [
+        "/auto --text \"查看任务列表\" --data '{\"tasks\":[{\"name\":\"任务 1\",\"duration\":\"10 分\",\"status\":\"✅\"}]}'",
+        "/auto --text \"查看概览\" --data '{\"title\":\"任务仪表盘\",\"progress\":\"80%\"}'"
+      ]
+    },
+    {
+      "name": "list_scenes",
+      "description": "列出所有支持的场景",
+      "usage": "/list_scenes",
+      "parameters": {},
+      "examples": [
+        "/list_scenes"
+      ]
+    },
+    {
+      "name": "preview",
+      "description": "预览指定场景的模板示例",
+      "usage": "/preview --scene <场景>",
+      "parameters": {
+        "scene": {
+          "type": "string",
+          "required": true,
+          "description": "场景类型",
+          "enum": ["task_list", "task_tree", "task_detail", "timeline", "dashboard"]
+        }
+      },
+      "examples": [
+        "/preview --scene task_list",
+        "/preview --scene dashboard"
+      ]
+    }
+  ],
+  "templates": [
+    {
+      "name": "task_list",
+      "description": "任务列表 - 简单表格风格",
+      "variables": ["tasks", "total", "duration", "rate"],
+      "keywords": ["任务列表", "待办", "进行中"]
+    },
+    {
+      "name": "task_tree",
+      "description": "任务分类 - 树结构风格",
+      "variables": ["categories", "stats"],
+      "keywords": ["分类", "项目", "分组"]
+    },
+    {
+      "name": "task_detail",
+      "description": "任务详情 - 卡片列表风格",
+      "variables": ["name", "duration", "stats", "status", "progress"],
+      "keywords": ["详情", "这个任务", "那个任务"]
+    },
+    {
+      "name": "timeline",
+      "description": "版本历史 - 时间轴风格",
+      "variables": ["events", "versions"],
+      "keywords": ["历史", "版本", "迭代", "时间线"]
+    },
+    {
+      "name": "dashboard",
+      "description": "总体概览 - 仪表盘风格",
+      "variables": ["title", "progress", "completed", "time", "count"],
+      "keywords": ["概览", "总结", "统计", "进度"]
+    }
+  ],
+  "config": {
+    "width": 40,
+    "useCodeBlock": true,
+    "language": "text",
+    "loadConfigOnStart": true,
+    "configFiles": [
+      "memory/display-template.md",
+      "memory/display-strategy.md"
+    ]
+  },
+  "repository": "https://github.com/steedjson/message-formatter-simple",
+  "homepage": "https://github.com/steedjson/message-formatter-simple#readme",
+  "bugs": "https://github.com/steedjson/message-formatter-simple/issues"
 }
