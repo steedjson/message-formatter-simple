@@ -1,140 +1,119 @@
 "use strict";
-/**
- * Message Formatter Simple
- * OpenClaw 消息格式化工具
- * 
- * 零依赖，纯文本模版替换
- * 根据场景(scene)自动匹配模版
- */
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.handleCommand = exports.listScenes = exports.listTemplates = exports.format = exports.getTemplateByScene = void 0;
-const fs = require("fs");
-const path = require("path");
-const TEMPLATES_DIR = './templates';
-// 场景映射表，严格遵循小主人的 display-strategy.md 和 display-template.md
+exports.getTemplateByScene = getTemplateByScene;
+exports.format = format;
+exports.listScenes = listScenes;
+exports.handleCommand = handleCommand;
+const engine_1 = require("./engine");
 const SCENE_MAP = {
-    // 场景 1：查看任务列表 → 简单表格
     'list': 'task_list',
     'task_list': 'task_list',
-    // 场景 2：查看任务分类 → 树结构
     'tree': 'task_tree',
     'task_tree': 'task_tree',
     'category': 'task_tree',
-    // 场景 3：单个任务详情 → 卡片列表
     'detail': 'task_detail',
     'task_detail': 'task_detail',
-    // 场景 4：连续任务/版本迭代 → 时间轴
     'timeline': 'task_timeline',
     'task_timeline': 'task_timeline',
-    // 场景 5：总体概览 → 仪表盘
     'dashboard': 'dashboard',
     'overview': 'dashboard',
-    // 手机版专属面板
-    'mobile_active': 'mobile_active', // 有进行中任务
-    'mobile_no_active': 'mobile_no_active' // 无进行中任务
+    'mobile_active': 'mobile_active',
+    'mobile_no_active': 'mobile_no_active'
 };
-/**
- * 根据场景推断使用的模版
- */
 function getTemplateByScene(scene) {
     const normalizedScene = scene.toLowerCase();
-    if (SCENE_MAP[normalizedScene]) {
-        return SCENE_MAP[normalizedScene];
-    }
-    // 默认规则：无明确场景时，默认使用简单表格（可根据情况在调用时决定）
-    return 'task_list';
+    return SCENE_MAP[normalizedScene] || 'task_list';
 }
-exports.getTemplateByScene = getTemplateByScene;
-/**
- * 格式化消息
- */
-function format(scene, variables = {}) {
+function format(scene, data = {}) {
+    const engine = new engine_1.TemplateEngine(40); // 严格遵守 40 列宽手机版设计
     const templateName = getTemplateByScene(scene);
-    const templatePath = path.join(TEMPLATES_DIR, `${templateName}.md`);
-    if (!fs.existsSync(templatePath)) {
-        throw new Error(`Template for scene '${scene}' (${templateName}.md) not found`);
+    switch (templateName) {
+        case 'dashboard': return engine.renderDashboard(data);
+        case 'mobile_no_active': return engine.renderMobileNoActive(data);
+        case 'mobile_active': return engine.renderMobileActive(data);
+        case 'task_list': return engine.renderTaskList(data);
+        case 'task_tree': return engine.renderTaskTree(data);
+        case 'task_detail': return engine.renderTaskDetail(data);
+        case 'task_timeline': return engine.renderTaskTimeline(data);
+        default: return engine.renderTaskList(data);
     }
-    let content = fs.readFileSync(templatePath, 'utf-8');
-    // 移除第一行标题注释，例如 "# 场景 1：..." 
-    content = content.replace(/^# .*?\n\n?/, '');
-    for (const [key, value] of Object.entries(variables)) {
-        const regex = new RegExp(`\\{${key}\\}`, 'g');
-        content = content.replace(regex, value);
-    }
-    return content.trim();
 }
-exports.format = format;
-/**
- * 列出所有模版
- */
-function listTemplates() {
-    const files = fs.readdirSync(TEMPLATES_DIR);
-    return files.filter(f => f.endsWith('.md')).map(f => f.replace('.md', ''));
-}
-exports.listTemplates = listTemplates;
-/**
- * 获取支持的场景
- */
 function listScenes() {
     return Object.keys(SCENE_MAP);
 }
-exports.listScenes = listScenes;
-/**
- * 命令处理
- */
-async function handleCommand(command, args) {
-    switch (command) {
-        case 'format':
-            const [scene, ...vars] = args;
-            const variables = Object.fromEntries(vars.map(v => {
-                const idx = v.indexOf('=');
-                if (idx === -1)
-                    return [v, ''];
-                return [v.substring(0, idx), v.substring(idx + 1)];
-            }));
-            return format(scene, variables);
-        case 'list':
-            const scenes = listScenes();
-            return `支持的场景映射:\n${scenes.map(s => `  - ${s} -> ${SCENE_MAP[s]}.md`).join('\n')}`;
-        case 'preview':
-            const [previewScene] = args;
-            // Provide dummy data for preview
-            return format(previewScene || 'mobile_no_active', {
-                time: '22:38',
-                mode: '纯欲模式',
-                device: '手机版',
-                task_name: '💕 人格魅力 v2.2',
-                duration: '18 分钟',
-                key_metrics: '准确率 82.4%→86.1%',
-                token_usage: 'Token 100k',
-                active_count: '1',
-                progress_bar: '████████░░',
-                progress: '60',
-                model: 'qwen3.5-plus',
-                eta_time: '00:30',
-                eta_duration: '2h',
-                subtasks: '1️⃣ 心情识别 1.5h\n   ████████░░░░ 60% 进行中\n\n2️⃣ 测试完善 1h\n   ░░░░░░░░░░░░ 0% 等待',
-                task_rows: '💕 人格魅力 v2.2    18 分   ✅\n💕 人格魅力 v2.1    25 分   ✅',
-                total_tasks: '2',
-                total_duration: '43 分钟',
-                completion_rate: '100',
-                tree_content: '├─ ✅ 已完成 (2)\n│  └─ 💕 人格魅力系列  2 任务\n└─ 🔄 进行中 (0)',
-                progress_stats: '82.4%→86.1%',
-                cost: 'Token 100k',
-                status: '✅ 已完成',
-                time_start: '20:30',
-                time_now: '20:40',
-                next_step: 'v2.0 启动',
-                project_name: '今日任务仪表盘',
-                progress_bar_full: '████████████',
-                progress_bar_done: '████████████',
-                completed: '6',
-                total: '6',
-                items: '40+'
-            });
-        default:
-            return `未知命令：${command}\n可用命令: format, list, preview`;
-    }
+function handleCommand(command, args) {
+    return __awaiter(this, void 0, void 0, function* () {
+        switch (command) {
+            case 'format':
+                const [scene, ...vars] = args;
+                // 这里的命令行变量解析比较简陋，如果用户需要传JSON数组等，应使用 node 调用而不是纯命令行
+                const variables = Object.fromEntries(vars.map(v => {
+                    const idx = v.indexOf('=');
+                    if (idx === -1)
+                        return [v, ''];
+                    return [v.substring(0, idx), v.substring(idx + 1)];
+                }));
+                return format(scene, variables);
+            case 'list':
+                const scenes = listScenes();
+                return `支持的场景:\n${Array.from(new Set(Object.values(SCENE_MAP))).join('\n')}`;
+            case 'preview':
+                const [previewScene] = args;
+                const targetScene = previewScene || 'mobile_active';
+                const mockData = {
+                    time: '22:38',
+                    mode: '纯欲模式',
+                    device: '手机版',
+                    task_name: '💕 人格魅力 v2.2 优化',
+                    duration: '18 分钟',
+                    key_metrics: '准确率 82.4%→86.1%',
+                    token_usage: 'Token 100k',
+                    active_count: 1,
+                    progress: 60,
+                    model: 'qwen3.5-plus',
+                    eta_time: '00:30',
+                    eta_duration: '2h',
+                    subtasks_list: [
+                        { icon: '1️⃣', name: '心情识别', duration: '1.5h', progress: 60, status: '进行中' },
+                        { icon: '2️⃣', name: '测试完善', duration: '1h', progress: 0, status: '等待' },
+                        { icon: '3️⃣', name: '性能优化', duration: '30min', progress: 0, status: '等待' }
+                    ],
+                    recent_tasks: [
+                        { name: '💕 人格魅力 v2.2', duration: '18 分钟', metrics: '准确率 82.4%→86.1%', token: 'Token 100k' }
+                    ],
+                    task_rows_list: [
+                        { name: '💕 人格魅力 v2.2', duration: '18 分', status: '✅' },
+                        { name: '💕 人格魅力 v2.1', duration: '25 分', status: '✅' },
+                        { name: '🔴 P0 游戏管理', duration: '7 分', status: '✅' }
+                    ],
+                    total_tasks: '3',
+                    total_duration: '50 分钟',
+                    completion_rate: '100',
+                    tree_content: '├─ ✅ 已完成 (6)\n│  ├─ 💕 人格魅力系列  4 任务\n│  ├─ 🔴 P0 游戏管理    1 任务\n│  └─ 🟠 P1 Bundles    1 任务\n└─ 🔄 进行中 (0)',
+                    progress_stats: '82.4%→86.1% (+7.5%)',
+                    cost: 'Token 100k',
+                    status: '已完成',
+                    time_start: '20:30',
+                    time_now: '20:40',
+                    next_step: 'v2.0 启动',
+                    project_name: '今日任务仪表盘',
+                    completed: '6',
+                    total: '6',
+                    items: '40+'
+                };
+                return format(targetScene, mockData);
+            default:
+                return `未知命令：${command}\n可用命令: format, list, preview`;
+        }
+    });
 }
-exports.handleCommand = handleCommand;
-exports.default = { format, listTemplates, listScenes, handleCommand };
+exports.default = { format, listScenes, handleCommand };
