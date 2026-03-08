@@ -1,71 +1,41 @@
-# 任务进度更新
+# 任务进度更新 (场景 4: 时间轴)
 
 <!-- platform:telegram -->
-🔄 **【进度更新】** 🔄
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔹 **任务名称**： `{task_name}`
-🔹 **当前进度**： `{progress}%`
-🔹 **当前状态**： {status}
-🔹 **更新时间**： `{updated_at}`
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-📈 `{progress_bar}`
-*由 OpenClaw 自动跟进* 🐾
+{time_start}  {task_name} 启动 ─────●
+                    │
+{time_now}  {status} ────●───● {next_step}
 <!-- /platform -->
 
 <!-- platform:wechat -->
-🔄【任务进度更新】🔄
-
-📌 任务名称：{task_name}
-📊 当前进度：{progress}%
-🎯 当前状态：{status}
-⏰ 更新时间：{updated_at}
-
-📈 {progress_bar}
-💡 由 OpenClaw 自动跟进 🐾
+{time_start} {task_name} 启动 ─────●
+│
+{time_now} {status} ────●───● {next_step}
 <!-- /platform -->
 
 <!-- platform:discord -->
->>> ## 🔄 **任务进度追踪** 🔄
-**🏷️ 任务名称**： `{task_name}`
-**📈 当前进度**： `{progress}%`
-**🟢 当前状态**： `{status}`
-**⏱️ 更新时间**： `{updated_at}`
-
-`{progress_bar}`
-*— Powered by OpenClaw 🐾*
+```
+{time_start}  {task_name} 启动 ─────●
+                    │
+{time_now}  {status} ────●───● {next_step}
+```
 <!-- /platform -->
 
 <!-- platform:dingtalk -->
-### 🔄 任务进度更新
----
-- **任务名称**：{task_name}
-- **当前进度**：{progress}%
-- **当前状态**：{status}
-- **更新时间**：{updated_at}
-
-📈 **进度条**：{progress_bar}
----
-*来自 OpenClaw 的智能助手 🐾*
+```text
+{time_start}  {task_name} 启动 ─────●
+                    │
+{time_now}  {status} ────●───● {next_step}
+```
 <!-- /platform -->
 
 <!-- platform:feishu -->
-**🔄 任务进度同步**
-***
-**任务名称**：{task_name}
-**当前进度**：{progress}%
-**当前状态**：{status}
-**更新时间**：{updated_at}
-
-📈 {progress_bar}
-***
-*🐾 OpenClaw Bot*
+```text
+{time_start}  {task_name} 启动 ─────●
+                    │
+{time_now}  {status} ────●───● {next_step}
+```
 <!-- /platform -->
 
 <!-- platform:text -->
-[任务进度]
-任务：{task_name}
-进度：{progress}%
-状态：{status}
-更新时间：{updated_at}
-进度条：{progress_bar}
+[{time_start}] {task_name} 启动 -> [{time_now}] {status} -> Next: {next_step}
 <!-- /platform -->
