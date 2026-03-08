@@ -4,12 +4,28 @@ OpenClaw 消息格式化工具 - 零依赖，开箱即用
 
 ## 🚀 安装
 
+### 方式 1: 一键安装（推荐）
+
 ```bash
-# 复制到 skills 目录
+cd message-formatter-simple
+./install.sh
+```
+
+### 方式 2: 手动安装
+
+```bash
 cp -r message-formatter-simple ~/.openclaw/workspace/skills/message-formatter
 ```
 
+### 方式 3: OpenClaw 命令
+
+```bash
+openclaw skill install github:steedjson/message-formatter-simple
+```
+
 ## 💡 使用
+
+### OpenClaw 命令
 
 ```bash
 # 格式化消息
@@ -17,6 +33,24 @@ openclaw message-formatter format task_complete telegram task_name="测试" stat
 
 # 列出模版
 openclaw message-formatter list
+
+# 预览模版
+openclaw message-formatter preview task_complete
+```
+
+### 代码调用
+
+```typescript
+import { format, listTemplates } from './index.ts';
+
+// 格式化消息
+const message = format('task_complete', 'telegram', {
+  task_name: '测试任务',
+  status: '已完成'
+});
+
+// 列出模版
+const templates = listTemplates();
 ```
 
 ## 📦 支持模版
