@@ -8,16 +8,27 @@
     {
       "name": "format",
       "description": "格式化消息",
-      "usage": "/format <template> [platform] [variables...]"
+      "usage": "/format <template> [platform] [key=value...]"
     },
     {
       "name": "list",
       "description": "列出所有模版",
       "usage": "/list"
+    },
+    {
+      "name": "preview",
+      "description": "预览模版",
+      "usage": "/preview <template>"
     }
   ],
   "config": {
     "templatesDir": "./templates",
-    "defaultPlatform": "telegram"
+    "defaultPlatform": "telegram",
+    "autoDetect": true,
+    "platforms": ["telegram", "wechat", "discord", "text"]
+  },
+  "install": {
+    "script": "./install.sh",
+    "uninstall": "./uninstall.sh"
   }
 }
