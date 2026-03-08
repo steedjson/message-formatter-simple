@@ -62,10 +62,34 @@ const templates = listTemplates();
 
 ## 🌐 支持平台
 
-- `telegram` - Telegram（默认）
+- `auto` - 自动检测（默认）
+- `telegram` - Telegram
 - `wechat` - 微信
+- `dingtalk` - 钉钉
+- `feishu` - 飞书
+- `slack` - Slack
 - `discord` - Discord
 - `text` - 纯文本
+
+### 自动检测
+
+支持通过环境变量自动检测平台：
+
+```bash
+# 飞书
+export FEISHU_WEBHOOK=xxx
+
+# 钉钉
+export DINGTALK_WEBHOOK=xxx
+
+# Slack
+export SLACK_WEBHOOK_URL=xxx
+
+# Discord
+export DISCORD_WEBHOOK_URL=xxx
+```
+
+运行 `openclaw message-formatter detect` 查看当前检测到的平台。
 
 ## ✅ 特点
 

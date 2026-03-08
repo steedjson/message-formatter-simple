@@ -19,13 +19,27 @@
       "name": "preview",
       "description": "预览模版",
       "usage": "/preview <template>"
+    },
+    {
+      "name": "detect",
+      "description": "自动检测平台",
+      "usage": "/detect"
     }
   ],
   "config": {
     "templatesDir": "./templates",
-    "defaultPlatform": "telegram",
+    "defaultPlatform": "auto",
     "autoDetect": true,
-    "platforms": ["telegram", "wechat", "discord", "text"]
+    "platforms": [
+      "telegram",
+      "wechat",
+      "dingtalk",
+      "feishu",
+      "slack",
+      "discord",
+      "text"
+    ],
+    "autoDetectDevice": true
   },
   "install": {
     "script": "./install.sh",
